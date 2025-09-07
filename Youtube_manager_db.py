@@ -152,6 +152,15 @@ def get_video_details(video_id):
     cursor.execute("SELECT * FROM videos WHERE id = ?", (video_id,))
     return cursor.fetchone()
 
+def validate_video_id(video_id):
+    """Check if a video ID exists in the database"""
+    try:
+        video_id = int(video_id)
+        cursor.execute("SELECT id FROM videos WHERE id = ?", (video_id,))
+        return cursor.fetchone() is not None
+    except ValueError:
+        return False
+
 # Enhanced Main Application
 def main():
     print("Welcome to YouTube Learning Manager!")
@@ -212,14 +221,17 @@ def main():
                 print(f"\nFound {len(videos)} video(s):")
                 print("-" * 80)
                 for video in videos:
-                    priority_text = {1: "High", 2: "Medium", 3: "Low"}[video[5]]
-                    print(f"ID: {video[0]} | {video[1]} | Status: {video[7]} | Priority: {priority_text} | Deadline: {video[9] or 'None'}")
+                    priority_text = {1: "High", 2: "Medium", 3: "Low"}[video[6]]
+                    print(f"ID: {video[0]} | {video[1]} | Status: {video[7]} | Priority: {priority_text} | Deadline: {video[10] or 'None'}")
             else:
                 print("No videos found.")
                 
         elif choice == '3':
             print("\n--- Update Video Status ---")
             video_id = input("Enter video ID to update: ")
+            if not validate_video_id(video_id):
+                print("❌ Invalid video ID!")
+                continue
             new_status = input("Enter new status (pending, in-progress, completed): ")
             try:
                 update_video_status(video_id, new_status)
@@ -230,6 +242,9 @@ def main():
         elif choice == '4':
             print("\n--- Add Task to Video ---")
             video_id = input("Enter video ID to add task: ")
+            if not validate_video_id(video_id):
+                print("❌ Invalid video ID!")
+                continue
             task_desc = input("Task description: ")
             timestamp = input("Timestamp (optional, format HH:MM:SS): ")
             try:
@@ -241,6 +256,9 @@ def main():
         elif choice == '5':
             print("\n--- View Video Details & Tasks ---")
             video_id = input("Enter video ID to view details: ")
+            if not validate_video_id(video_id):
+                print("❌ Invalid video ID!")
+                continue
             video = get_video_details(video_id)
             
             if video:
@@ -250,9 +268,9 @@ def main():
                 print(f"Channel: {video[3] or 'Not specified'}")
                 print(f"Duration: {video[4] or 'Not specified'}")
                 print(f"Category: {video[5] or 'Not specified'}")
-                print(f"Priority: {['High', 'Medium', 'Low'][video[5]-1]}")
+                print(f"Priority: {['High', 'Medium', 'Low'][video[6]-1]}")
                 print(f"Status: {video[7]}")
-                print(f"Time spent: {video[10]} minutes")
+                print(f"Time spent: {video[11]} minutes")
                 print(f"Created: {video[9]}")
                 print(f"Deadline: {video[10] or 'No deadline'}")
                 print(f"Notes: {video[8] or 'No notes'}")
@@ -301,7 +319,7 @@ def main():
                 print(f"\nFound {len(videos)} video(s) matching '{search_term}':")
                 print("-" * 80)
                 for video in videos:
-                    priority_text = {1: "High", 2: "Medium", 3: "Low"}[video[5]]
+                    priority_text = {1: "High", 2: "Medium", 3: "Low"}[video[6]]
                     print(f"ID: {video[0]} | {video[1]} | Channel: {video[3] or 'Unknown'} | Status: {video[7]} | Priority: {priority_text}")
             else:
                 print(f"No videos found matching '{search_term}'.")
@@ -309,6 +327,9 @@ def main():
         elif choice == '9':
             print("\n--- Record Time Spent ---")
             video_id = input("Enter video ID: ")
+            if not validate_video_id(video_id):
+                print("❌ Invalid video ID!")
+                continue
             minutes = input("Enter minutes spent: ")
             try:
                 record_time_spent(video_id, int(minutes))
@@ -319,6 +340,9 @@ def main():
         elif choice == '10':
             print("\n--- Delete Video ---")
             video_id = input("Enter video ID to delete: ")
+            if not validate_video_id(video_id):
+                print("❌ Invalid video ID!")
+                continue
             confirm = input("Are you sure? This will delete the video and all its tasks! (y/n): ")
             if confirm.lower() == 'y':
                 try:
@@ -332,10 +356,18 @@ def main():
         elif choice == '11':
             print("\nThank you for using YouTube Learning Manager!")
             print("Keep learning and growing! 🚀")
+            conn.close()
             break
             
         else:
             print("❌ Invalid choice! Please enter a number between 1-11.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\nProgram interrupted by user. Goodbye!")
+        conn.close()
+    except Exception as e:
+        print(f"\nAn unexpected error occurred: {e}")
+        conn.close()
